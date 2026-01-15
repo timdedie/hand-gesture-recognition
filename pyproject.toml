@@ -1,0 +1,13 @@
+[project]
+name = "hand-gesture-recognition"
+version = "0.1.0"
+description = "Hand gesture recognition using CNN"
+requires-python = ">=3.9"
+dependencies = [
+    "opencv-python",
+    "numpy",
+    "torch",
+    "scikit-learn",
+    "matplotlib",
+    "seaborn",
+]
