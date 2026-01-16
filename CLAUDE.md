@@ -17,7 +17,7 @@ uv pip install -e .
 
 ### Run Scripts
 ```bash
-cd src
+cd scripts
 python collect_data.py                     # Collect training images via webcam (keys 1-5 save, q quits)
 python train.py                            # Run all training experiments (augmentation + dataset size)
 python evaluate.py                         # Evaluate default model
