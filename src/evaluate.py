@@ -3,14 +3,19 @@ import numpy as np
 from sklearn.metrics import confusion_matrix, classification_report, f1_score, accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 from model import SimpleCNN
 from dataset import get_data_loaders
+
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_MODEL_PATH = os.path.join(SCRIPT_DIR, "..", "models", "model_all_augmentations.pth")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class_names = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
 
 
-def evaluate_model(model_path="../models/model_all_augmentations.pth"):
+def evaluate_model(model_path=DEFAULT_MODEL_PATH):
     model = SimpleCNN(num_classes=5).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
@@ -78,7 +83,7 @@ def plot_confusion_matrix(y_true, y_pred, save_path="confusion_matrix.png"):
 if __name__ == "__main__":
     import sys
 
-    model_path = sys.argv[1] if len(sys.argv) > 1 else "../models/model_all_augmentations.pth"
+    model_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_MODEL_PATH
 
     print(f"Evaluating model: {model_path}")
 

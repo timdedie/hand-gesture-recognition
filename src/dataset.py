@@ -7,6 +7,10 @@ from torch.utils.data import Dataset, DataLoader
 from augmentations import apply_augmentations
 import random
 
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DATASET_PATH = os.path.join(SCRIPT_DIR, "..", "dataset")
+
 class GestureDataset(Dataset):
     def __init__(self, images, labels, augment_list=None, augment_prob=0.5):
         self.images = images
@@ -31,7 +35,9 @@ class GestureDataset(Dataset):
         return torch.tensor(image), torch.tensor(label)
 
 
-def load_dataset(dataset_path="../dataset", max_per_class=None):
+def load_dataset(dataset_path=None, max_per_class=None):
+    if dataset_path is None:
+        dataset_path = DEFAULT_DATASET_PATH
     classes = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
     images = []
     labels = []
@@ -55,7 +61,9 @@ def load_dataset(dataset_path="../dataset", max_per_class=None):
     return images, np.array(labels)
 
 
-def get_data_loaders(dataset_path="../dataset", batch_size=32, augment_list=None, max_per_class=None):
+def get_data_loaders(dataset_path=None, batch_size=32, augment_list=None, max_per_class=None):
+    if dataset_path is None:
+        dataset_path = DEFAULT_DATASET_PATH
     images, labels = load_dataset(dataset_path, max_per_class)
 
     X_train, X_test, y_train, y_test = train_test_split(

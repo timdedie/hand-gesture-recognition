@@ -2,13 +2,18 @@ import torch
 import cv2
 import numpy as np
 import mediapipe as mp
+import os
 from model import SimpleCNN
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class_names = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
 
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_MODEL_PATH = os.path.join(SCRIPT_DIR, "..", "models", "model_all_augmentations.pth")
 
-def load_model(model_path="../models/model_all_augmentations.pth"):
+
+def load_model(model_path=DEFAULT_MODEL_PATH):
     model = SimpleCNN(num_classes=5).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
     model.eval()
@@ -31,7 +36,7 @@ def predict(model, frame):
     return class_names[prediction.item()], confidence.item()
 
 
-def run_live_demo(model_path="../models/model_all_augmentations.pth"):
+def run_live_demo(model_path=DEFAULT_MODEL_PATH):
     model = load_model(model_path)
 
     mp_hands = mp.solutions.hands
@@ -94,6 +99,6 @@ def run_live_demo(model_path="../models/model_all_augmentations.pth"):
 
 if __name__ == "__main__":
     import sys
-    model_path = sys.argv[1] if len(sys.argv) > 1 else "../models/model_all_augmentations.pth"
+    model_path = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_MODEL_PATH
     print(f"Loading model: {model_path}")
     run_live_demo(model_path)

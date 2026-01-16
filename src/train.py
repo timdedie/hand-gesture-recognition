@@ -4,6 +4,12 @@ import torch.optim as optim
 from model import SimpleCNN
 from dataset import get_data_loaders
 import json
+import os
+
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(SCRIPT_DIR, "..", "models")
+RESULTS_PATH = os.path.join(SCRIPT_DIR, "..", "results.json")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -94,7 +100,7 @@ def run_augmentation_experiments():
             'history': history
         }
 
-        torch.save(model.state_dict(), f"../models/model_{name}.pth")
+        torch.save(model.state_dict(), os.path.join(MODELS_DIR, f"model_{name}.pth"))
 
     return results
 
@@ -141,7 +147,7 @@ if __name__ == "__main__":
         'dataset_size_experiments': size_results
     }
 
-    with open('../results.json', 'w') as f:
+    with open(RESULTS_PATH, 'w') as f:
         json.dump(all_results, f, indent=2, default=lambda x: x if not isinstance(x, list) else x)
 
     print("\n\nAll experiments completed!")
