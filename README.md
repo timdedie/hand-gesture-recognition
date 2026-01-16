@@ -20,6 +20,8 @@ uv pip install -e .
 
 ## Usage
 
+All scripts should be run from the repository root directory.
+
 ### Step 1: Collect Dataset
 
 Run the data collection script to capture images using your webcam:
@@ -65,10 +67,16 @@ Results are saved to `results.json` and models are saved as `model_*.pth` files.
 
 ### Step 3: Evaluate
 
-Evaluate a trained model:
+Evaluate the default trained model:
 
 ```bash
-python evaluate.py model_all_augmentations.pth
+python evaluate.py
+```
+
+Or specify a different model:
+
+```bash
+python evaluate.py models/model_flip_rotate.pth
 ```
 
 This prints:
@@ -80,7 +88,7 @@ This prints:
 
 ### Step 4: Live Demo
 
-Test the model in real-time using your webcam:
+Test the default model in real-time using your webcam:
 
 ```bash
 python live_demo.py
@@ -89,7 +97,7 @@ python live_demo.py
 Or specify a different model:
 
 ```bash
-python live_demo.py model_flip_rotate.pth
+python live_demo.py models/model_flip_rotate.pth
 ```
 
 Controls:
@@ -97,24 +105,11 @@ Controls:
 
 The demo detects your hand with a bounding box and shows the predicted gesture and confidence score.
 
-## Utility Scripts
-
-### Crop Existing Dataset
-
-If you have an existing dataset without hand cropping, run:
-
-```bash
-python crop_dataset.py
-```
-
-This uses MediaPipe to detect hands in all images and replaces them with cropped versions.
-
 ## File Structure
 
 ```
 hand-gesture-recognition/
 ├── collect_data.py      # Webcam capture with hand detection
-├── crop_dataset.py      # Crop existing dataset images
 ├── augmentations.py     # Custom augmentation functions
 ├── dataset.py           # Data loading and splitting
 ├── model.py             # CNN architecture
@@ -127,6 +122,8 @@ hand-gesture-recognition/
 │   ├── peace/
 │   ├── open_palm/
 │   └── no_hand/
+├── models/              # Trained models (created by train.py)
+│   └── model_*.pth
 └── results.json         # Experiment results (created by train.py)
 ```
 

@@ -8,9 +8,7 @@ from model import SimpleCNN
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class_names = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
 
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_MODEL_PATH = os.path.join(SCRIPT_DIR, "..", "models", "model_all_augmentations.pth")
+DEFAULT_MODEL_PATH = "models/model_all_augmentations.pth"
 
 
 def load_model(model_path=DEFAULT_MODEL_PATH):

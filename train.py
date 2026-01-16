@@ -6,10 +6,8 @@ from dataset import get_data_loaders
 import json
 import os
 
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(SCRIPT_DIR, "..", "models")
-RESULTS_PATH = os.path.join(SCRIPT_DIR, "..", "results.json")
+MODELS_DIR = "models"
+RESULTS_PATH = "results.json"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

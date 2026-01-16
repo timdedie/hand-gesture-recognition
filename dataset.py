@@ -7,9 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 from augmentations import apply_augmentations
 import random
 
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DATASET_PATH = os.path.join(SCRIPT_DIR, "..", "dataset")
+DEFAULT_DATASET_PATH = "dataset"
 
 class GestureDataset(Dataset):
     def __init__(self, images, labels, augment_list=None, augment_prob=0.5):

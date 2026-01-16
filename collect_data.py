@@ -2,9 +2,7 @@ import cv2
 import os
 import mediapipe as mp
 
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-dataset_path = os.path.join(SCRIPT_DIR, "..", "dataset")
+dataset_path = "dataset"
 classes = {
     '1': 'thumbs_up',
     '2': 'thumbs_down',
