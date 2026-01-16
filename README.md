@@ -13,7 +13,9 @@ A CNN-based hand gesture recognition system that classifies 5 gesture types.
 ## Setup
 
 ```bash
-pip install -e .
+uv venv .venv --python 3.12
+source .venv/bin/activate
+uv pip install -e .
 ```
 
 ## Usage
