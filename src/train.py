@@ -94,7 +94,7 @@ def run_augmentation_experiments():
             'history': history
         }
 
-        torch.save(model.state_dict(), f"model_{name}.pth")
+        torch.save(model.state_dict(), f"../models/model_{name}.pth")
 
     return results
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         'dataset_size_experiments': size_results
     }
 
-    with open('results.json', 'w') as f:
+    with open('../results.json', 'w') as f:
         json.dump(all_results, f, indent=2, default=lambda x: x if not isinstance(x, list) else x)
 
     print("\n\nAll experiments completed!")

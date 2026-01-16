@@ -31,7 +31,7 @@ class GestureDataset(Dataset):
         return torch.tensor(image), torch.tensor(label)
 
 
-def load_dataset(dataset_path="dataset", max_per_class=None):
+def load_dataset(dataset_path="../dataset", max_per_class=None):
     classes = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
     images = []
     labels = []
@@ -55,7 +55,7 @@ def load_dataset(dataset_path="dataset", max_per_class=None):
     return images, np.array(labels)
 
 
-def get_data_loaders(dataset_path="dataset", batch_size=32, augment_list=None, max_per_class=None):
+def get_data_loaders(dataset_path="../dataset", batch_size=32, augment_list=None, max_per_class=None):
     images, labels = load_dataset(dataset_path, max_per_class)
 
     X_train, X_test, y_train, y_test = train_test_split(

@@ -1,6 +1,6 @@
 # Hand Gesture Recognition
 
-A CNN-based hand gesture recognition system that classifies 5 gesture types.
+A CNN-based hand gesture recognition system that classifies 5 gesture types using MediaPipe for hand detection.
 
 ## Classes
 
@@ -36,7 +36,7 @@ Controls:
 - Press `5` to save no hand image
 - Press `q` to quit
 
-Aim for 100-200 images per class. Images are saved to the `dataset/` folder.
+The script uses MediaPipe to detect your hand and saves only the cropped hand region. A green bounding box shows the detected hand. Aim for 100-200 images per class.
 
 ### Step 2: Train the Model
 
@@ -95,13 +95,26 @@ python live_demo.py model_flip_rotate.pth
 Controls:
 - Press `q` to quit
 
-The demo shows the predicted gesture and confidence score on the video feed.
+The demo detects your hand with a bounding box and shows the predicted gesture and confidence score.
+
+## Utility Scripts
+
+### Crop Existing Dataset
+
+If you have an existing dataset without hand cropping, run:
+
+```bash
+python crop_dataset.py
+```
+
+This uses MediaPipe to detect hands in all images and replaces them with cropped versions.
 
 ## File Structure
 
 ```
 hand-gesture-recognition/
-├── collect_data.py      # Webcam capture script
+├── collect_data.py      # Webcam capture with hand detection
+├── crop_dataset.py      # Crop existing dataset images
 ├── augmentations.py     # Custom augmentation functions
 ├── dataset.py           # Data loading and splitting
 ├── model.py             # CNN architecture
@@ -127,6 +140,15 @@ Simple CNN with 3 convolutional layers:
 - Flatten -> Dense(256) -> Dropout(0.5) -> Dense(5)
 
 Input size: 64x64 RGB images
+
+## Hand Detection
+
+MediaPipe Hands is used to:
+- Detect hand presence in the frame
+- Extract bounding box coordinates from hand landmarks
+- Crop the hand region with 20px padding
+
+This ensures the model learns hand features rather than background.
 
 ## Augmentations
 

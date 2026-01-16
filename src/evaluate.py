@@ -10,7 +10,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class_names = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
 
 
-def evaluate_model(model_path="model_all_augmentations.pth"):
+def evaluate_model(model_path="../models/model_all_augmentations.pth"):
     model = SimpleCNN(num_classes=5).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()
@@ -78,7 +78,7 @@ def plot_confusion_matrix(y_true, y_pred, save_path="confusion_matrix.png"):
 if __name__ == "__main__":
     import sys
 
-    model_path = sys.argv[1] if len(sys.argv) > 1 else "model_all_augmentations.pth"
+    model_path = sys.argv[1] if len(sys.argv) > 1 else "../models/model_all_augmentations.pth"
 
     print(f"Evaluating model: {model_path}")
 

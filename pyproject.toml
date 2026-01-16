@@ -14,7 +14,8 @@ dependencies = [
     "scikit-learn",
     "matplotlib",
     "seaborn",
+    "mediapipe==0.10.9",
 ]
 
-[tool.setuptools]
-py-modules = ["model", "dataset", "train", "evaluate", "collect_data", "augmentations"]
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -2,61 +2,80 @@
 
 ## Overview
 
-This project implements a hand gesture recognition system using a Convolutional Neural Network (CNN). The system captures images from a webcam, applies custom data augmentation techniques, trains a CNN classifier, and evaluates performance using standard metrics.
+This project implements a hand gesture recognition system using a Convolutional Neural Network (CNN). The system uses MediaPipe for hand detection, captures cropped hand images from a webcam, applies custom data augmentation techniques, trains a CNN classifier, and evaluates performance using standard metrics.
 
 ---
 
-## 1. Data Collection (`collect_data.py`)
+## 1. Hand Detection (MediaPipe)
 
 ### How It Works
 
-The data collection script uses OpenCV to capture frames from the default webcam (device index 0). Each frame is a BGR image captured in real-time.
+MediaPipe Hands detects hands in real-time and provides 21 hand landmarks. We use these landmarks to compute a bounding box around the hand.
 
 ### Technical Flow
 
-1. **Initialize webcam**: `cv2.VideoCapture(0)` opens the default camera
-2. **Create directories**: Creates folder structure for each gesture class
-3. **Capture loop**: Continuously reads frames using `cap.read()`
-4. **Display overlay**: Shows live count of images per class on the frame
-5. **Save on keypress**: When user presses 1-5, saves the current frame as JPEG
+1. Convert frame from BGR to RGB (MediaPipe expects RGB)
+2. Process frame with `hands.process(rgb_frame)`
+3. Extract x,y coordinates from all 21 landmarks
+4. Compute bounding box from min/max coordinates
+5. Add 20px padding and clip to image boundaries
+6. Crop the hand region
 
-### Image Storage
+### Bounding Box Calculation
 
-Images are saved as JPEG files with the naming convention `{class_name}_{index}.jpg`. The JPEG format uses lossy compression which reduces file size while maintaining visual quality suitable for training.
+```python
+x_coords = [lm.x for lm in landmarks.landmark]
+y_coords = [lm.y for lm in landmarks.landmark]
 
-### Frame Capture Details
+x_min = int(min(x_coords) * w) - 20
+x_max = int(max(x_coords) * w) + 20
+y_min = int(min(y_coords) * h) - 20
+y_max = int(max(y_coords) * h) + 20
+```
 
-- Resolution: Default camera resolution (typically 640x480 or 1280x720)
-- Color space: BGR (OpenCV default)
-- Format: 8-bit unsigned integer per channel (0-255)
+Landmarks are normalized to [0, 1], so we multiply by image dimensions to get pixel coordinates.
+
+### Why Hand Detection Matters
+
+Without hand detection, the model learns background features instead of hand gestures. This causes high test accuracy but poor real-world performance. Cropping isolates the hand and forces the model to learn gesture features.
 
 ---
 
-## 2. Data Augmentation (`augmentations.py`)
+## 2. Data Collection (`collect_data.py`)
+
+### How It Works
+
+The data collection script uses OpenCV to capture frames from the default webcam and MediaPipe to detect and crop hands.
+
+### Technical Flow
+
+1. Initialize webcam: `cv2.VideoCapture(0)`
+2. Initialize MediaPipe Hands detector
+3. Create directories for each gesture class
+4. Capture loop: Read frame, detect hand, draw bounding box
+5. On keypress 1-5: Save cropped hand region as JPEG
+6. For "no_hand" class: Save full frame (no hand detection needed)
+
+### Image Storage
+
+Images are saved as JPEG files with naming convention `{class_name}_{index}.jpg`. Only the cropped hand region is saved (except for no_hand class).
+
+---
+
+## 3. Data Augmentation (`augmentations.py`)
 
 All augmentation functions are implemented using basic OpenCV operations without high-level frameworks like torchvision.
 
-### 2.1 Horizontal Flip
+### 3.1 Horizontal Flip
 
 ```python
 def horizontal_flip(image):
     return cv2.flip(image, 1)
 ```
 
-**How it works**: `cv2.flip(image, 1)` flips the image around the y-axis. The second parameter specifies the flip code:
-- 0 = flip around x-axis (vertical flip)
-- 1 = flip around y-axis (horizontal flip)
-- -1 = flip around both axes
+Flips the image around the y-axis. Makes the model invariant to left/right hand orientation.
 
-**Mathematical operation**: For a pixel at position (x, y) in an image of width W:
-```
-new_x = W - 1 - x
-new_y = y
-```
-
-**Why it helps**: Hand gestures can appear from either direction. Flipping doubles the effective dataset size and makes the model invariant to left/right orientation.
-
-### 2.2 Rotation
+### 3.2 Rotation
 
 ```python
 def rotate(image, angle=None):
@@ -68,25 +87,9 @@ def rotate(image, angle=None):
     return cv2.warpAffine(image, matrix, (w, h))
 ```
 
-**How it works**:
+Rotates by -30 to +30 degrees around the center. Simulates natural hand tilt.
 
-1. `cv2.getRotationMatrix2D(center, angle, scale)` creates a 2x3 affine transformation matrix:
-```
-M = | cos(θ)  -sin(θ)  (1-cos(θ))*cx + sin(θ)*cy |
-    | sin(θ)   cos(θ)  -sin(θ)*cx + (1-cos(θ))*cy |
-```
-Where θ is the angle in degrees and (cx, cy) is the center point.
-
-2. `cv2.warpAffine(image, matrix, (w, h))` applies the transformation to every pixel:
-```
-dst(x', y') = src(M[0,0]*x + M[0,1]*y + M[0,2], M[1,0]*x + M[1,1]*y + M[1,2])
-```
-
-**Angle range**: -30 to +30 degrees. This range simulates natural hand tilt without extreme rotations that would be unrealistic.
-
-**Why it helps**: Users may hold their hand at slightly different angles. Rotation augmentation makes the model robust to these variations.
-
-### 2.3 Brightness Adjustment
+### 3.3 Brightness Adjustment
 
 ```python
 def adjust_brightness(image, factor=None):
@@ -100,27 +103,9 @@ def adjust_brightness(image, factor=None):
     return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 ```
 
-**How it works**:
+Multiplies the V (value/brightness) channel in HSV color space. Factor 0.5-1.5 simulates different lighting.
 
-1. Convert BGR to HSV color space:
-   - H (Hue): Color type (0-179 in OpenCV)
-   - S (Saturation): Color intensity (0-255)
-   - V (Value): Brightness (0-255)
-
-2. Multiply the V channel by the brightness factor
-
-3. Clip values to valid range [0, 255] to prevent overflow
-
-4. Convert back to BGR
-
-**Factor range**: 0.5 to 1.5
-- Factor < 1.0: Darker image
-- Factor = 1.0: No change
-- Factor > 1.0: Brighter image
-
-**Why it helps**: Lighting conditions vary significantly between environments. This augmentation simulates different lighting scenarios.
-
-### 2.4 Gaussian Blur
+### 3.4 Gaussian Blur
 
 ```python
 def gaussian_blur(image, kernel_size=None):
@@ -129,33 +114,9 @@ def gaussian_blur(image, kernel_size=None):
     return cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
 ```
 
-**How it works**:
+Applies Gaussian blur with kernel size 3, 5, or 7. Simulates camera focus issues.
 
-Gaussian blur convolves the image with a Gaussian kernel. The kernel is a 2D matrix where values follow a Gaussian distribution:
-
-```
-G(x, y) = (1 / 2πσ²) * e^(-(x² + y²) / 2σ²)
-```
-
-For a 3x3 kernel with σ=1, approximate values:
-```
-| 0.075  0.124  0.075 |
-| 0.124  0.204  0.124 |
-| 0.075  0.124  0.075 |
-```
-
-The kernel is applied via convolution:
-```
-output(x, y) = Σ Σ input(x+i, y+j) * kernel(i, j)
-```
-
-**Kernel sizes**: 3, 5, or 7 (must be odd numbers)
-- Larger kernel = more blur
-- σ = 0 means OpenCV calculates σ automatically from kernel size
-
-**Why it helps**: Simulates camera focus issues and motion blur. Makes the model robust to slightly out-of-focus images.
-
-### 2.5 Color Jitter
+### 3.5 Color Jitter
 
 ```python
 def color_jitter(image):
@@ -167,15 +128,9 @@ def color_jitter(image):
     return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 ```
 
-**How it works**:
+Shifts hue by ±10 and scales saturation by 0.8-1.2. Accounts for different skin tones and camera color profiles.
 
-1. **Hue shift**: Adds a random value (-10 to +10) to the H channel. Modulo 180 ensures the value stays in valid range. This shifts the color around the color wheel.
-
-2. **Saturation scale**: Multiplies the S channel by a random factor (0.8 to 1.2). This makes colors more vivid or more muted.
-
-**Why it helps**: Different cameras have different color profiles. Skin tones vary between people. This augmentation makes the model robust to color variations.
-
-### 2.6 Zoom
+### 3.6 Zoom
 
 ```python
 def zoom(image, factor=None):
@@ -189,72 +144,46 @@ def zoom(image, factor=None):
     return resized[start_y:start_y + h, start_x:start_x + w]
 ```
 
-**How it works**:
-
-1. Resize image to larger dimensions using `cv2.resize()` which uses bilinear interpolation by default
-2. Crop the center portion to match original dimensions
-3. This effectively zooms into the center of the image
-
-**Interpolation**: Bilinear interpolation calculates new pixel values as weighted average of 4 nearest pixels:
-```
-f(x, y) ≈ f(0,0)(1-x)(1-y) + f(1,0)x(1-y) + f(0,1)(1-x)y + f(1,1)xy
-```
-
-**Factor range**: 1.0 to 1.3 (up to 30% zoom)
-
-**Why it helps**: Hand distance from camera varies. Zoom augmentation simulates this variation.
+Resizes image larger then crops center. Up to 30% zoom simulates distance variation.
 
 ---
 
-## 3. Dataset Loading (`dataset.py`)
+## 4. Dataset Loading (`dataset.py`)
 
-### 3.1 GestureDataset Class
-
-This class extends PyTorch's `Dataset` class to create a custom dataset.
+### 4.1 GestureDataset Class
 
 ```python
 class GestureDataset(Dataset):
     def __init__(self, images, labels, augment_list=None, augment_prob=0.5):
 ```
 
-**Parameters**:
-- `images`: NumPy array of image data
+Parameters:
+- `images`: List of image arrays
 - `labels`: NumPy array of class indices (0-4)
 - `augment_list`: List of augmentation names to apply
 - `augment_prob`: Probability of applying augmentation (default 50%)
 
-### 3.2 Data Preprocessing in `__getitem__`
+### 4.2 Data Preprocessing
 
 ```python
 def __getitem__(self, idx):
     image = self.images[idx].copy()
-    label = self.labels[idx]
-
     if self.augment_list and random.random() < self.augment_prob:
         image = apply_augmentations(image, self.augment_list)
-
     image = cv2.resize(image, (64, 64))
     image = image.astype(np.float32) / 255.0
     image = np.transpose(image, (2, 0, 1))
-
     return torch.tensor(image), torch.tensor(label)
 ```
 
-**Step-by-step**:
+Steps:
+1. Copy image to avoid modifying original
+2. Apply augmentations with 50% probability
+3. Resize to 64x64
+4. Normalize to [0, 1]
+5. Transpose from HWC to CHW format
 
-1. **Copy image**: Prevents modifying the original data
-
-2. **Apply augmentations**: With probability `augment_prob`, applies the specified augmentations
-
-3. **Resize to 64x64**: Standardizes input size for the CNN. Uses bilinear interpolation.
-
-4. **Normalize to [0, 1]**: Divides by 255 to convert from uint8 (0-255) to float32 (0.0-1.0). This helps with gradient stability during training.
-
-5. **Transpose dimensions**: Converts from HWC (Height, Width, Channels) to CHW (Channels, Height, Width) format required by PyTorch.
-   - Input shape: (64, 64, 3)
-   - Output shape: (3, 64, 64)
-
-### 3.3 Train/Test Split
+### 4.3 Train/Test Split
 
 ```python
 X_train, X_test, y_train, y_test = train_test_split(
@@ -262,195 +191,56 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 ```
 
-**Parameters**:
-- `test_size=0.2`: 20% of data goes to test set
-- `random_state=42`: Fixed seed for reproducibility
-- `stratify=labels`: Ensures each class has same proportion in train and test sets
-
-**Stratification**: Without stratification, random splitting might put 90% of one class in training and only 10% in test. Stratified splitting maintains the original class distribution in both sets.
-
-### 3.4 DataLoader
-
-```python
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-```
-
-**batch_size=32**: Groups 32 images into a single batch for parallel processing
-
-**shuffle=True (training)**: Randomizes order each epoch to prevent the model from learning sequence patterns
-
-**shuffle=False (testing)**: Maintains consistent order for reproducible evaluation
+80/20 split with stratification to maintain class balance.
 
 ---
 
-## 4. CNN Architecture (`model.py`)
+## 5. CNN Architecture (`model.py`)
 
-### 4.1 Network Structure
+### 5.1 Network Structure
 
 ```python
 class SimpleCNN(nn.Module):
     def __init__(self, num_classes=5):
-        super(SimpleCNN, self).__init__()
-
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-
         self.pool = nn.MaxPool2d(2, 2)
         self.relu = nn.ReLU()
-
         self.fc1 = nn.Linear(128 * 8 * 8, 256)
         self.fc2 = nn.Linear(256, num_classes)
-
         self.dropout = nn.Dropout(0.5)
 ```
 
-### 4.2 Layer-by-Layer Analysis
+### 5.2 Forward Pass
 
-**Input**: (batch_size, 3, 64, 64)
+Input: (batch, 3, 64, 64)
 
-#### Convolutional Layer 1
-```python
-self.conv1 = nn.Conv2d(3, 32, kernel_size=3, padding=1)
-```
-- Input channels: 3 (RGB)
-- Output channels: 32 (learned filters)
-- Kernel size: 3x3
-- Padding: 1 (maintains spatial dimensions)
+| Layer | Output Shape |
+|-------|--------------|
+| Conv1 + ReLU + Pool | (batch, 32, 32, 32) |
+| Conv2 + ReLU + Pool | (batch, 64, 16, 16) |
+| Conv3 + ReLU + Pool | (batch, 128, 8, 8) |
+| Flatten | (batch, 8192) |
+| FC1 + ReLU + Dropout | (batch, 256) |
+| FC2 | (batch, 5) |
 
-**Convolution operation**:
-```
-output[b, c_out, h, w] = Σ Σ Σ input[b, c_in, h+i, w+j] * weight[c_out, c_in, i, j] + bias[c_out]
-```
-
-**Parameters**: 3 × 32 × 3 × 3 + 32 = 896
-
-**Output shape**: (batch_size, 32, 64, 64)
-
-After ReLU + MaxPool: (batch_size, 32, 32, 32)
-
-#### Convolutional Layer 2
-```python
-self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-```
-**Parameters**: 32 × 64 × 3 × 3 + 64 = 18,496
-
-**Output after ReLU + MaxPool**: (batch_size, 64, 16, 16)
-
-#### Convolutional Layer 3
-```python
-self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-```
-**Parameters**: 64 × 128 × 3 × 3 + 128 = 73,856
-
-**Output after ReLU + MaxPool**: (batch_size, 128, 8, 8)
-
-#### Flatten
-```python
-x = x.view(x.size(0), -1)
-```
-Reshapes from (batch_size, 128, 8, 8) to (batch_size, 8192)
-
-#### Fully Connected Layer 1
-```python
-self.fc1 = nn.Linear(128 * 8 * 8, 256)
-```
-**Parameters**: 8192 × 256 + 256 = 2,097,408
-
-#### Dropout
-```python
-self.dropout = nn.Dropout(0.5)
-```
-During training, randomly sets 50% of neurons to zero. This prevents overfitting by forcing the network to learn redundant representations.
-
-**Scaling**: During training, outputs are scaled by 1/(1-p) = 2 to maintain expected values. During evaluation, dropout is disabled.
-
-#### Fully Connected Layer 2 (Output)
-```python
-self.fc2 = nn.Linear(256, num_classes)
-```
-**Parameters**: 256 × 5 + 5 = 1,285
-
-**Total parameters**: ~2.19 million
-
-### 4.3 Activation Functions
-
-**ReLU (Rectified Linear Unit)**:
-```
-f(x) = max(0, x)
-```
-- Introduces non-linearity
-- Computationally efficient
-- Helps with vanishing gradient problem
-- Sparse activation (many zeros)
-
-### 4.4 MaxPooling
-
-```python
-self.pool = nn.MaxPool2d(2, 2)
-```
-
-Takes maximum value in each 2x2 window:
-```
-| 1  3 |
-| 2  4 |  → 4
-```
-
-**Purpose**:
-- Reduces spatial dimensions by half
-- Provides translation invariance
-- Reduces computational cost
-- Helps prevent overfitting
+Total parameters: ~2.19 million
 
 ---
 
-## 5. Training (`train.py`)
+## 6. Training (`train.py`)
 
-### 5.1 Loss Function
+### 6.1 Loss and Optimizer
 
 ```python
 criterion = nn.CrossEntropyLoss()
-```
-
-Cross-entropy loss for multi-class classification:
-
-```
-L = -Σ y_true[c] * log(softmax(y_pred)[c])
-```
-
-For single correct class c:
-```
-L = -log(softmax(y_pred)[c])
-```
-
-**Softmax** converts raw logits to probabilities:
-```
-softmax(x)[i] = e^(x[i]) / Σ e^(x[j])
-```
-
-### 5.2 Optimizer
-
-```python
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 ```
 
-**Adam (Adaptive Moment Estimation)** combines:
-- Momentum: Uses exponentially decaying average of past gradients
-- RMSprop: Uses exponentially decaying average of squared gradients
+Cross-entropy loss for multi-class classification. Adam optimizer with learning rate 0.001.
 
-**Update rule**:
-```
-m_t = β1 * m_(t-1) + (1 - β1) * g_t          # First moment
-v_t = β2 * v_(t-1) + (1 - β2) * g_t²         # Second moment
-m̂_t = m_t / (1 - β1^t)                       # Bias correction
-v̂_t = v_t / (1 - β2^t)                       # Bias correction
-θ_t = θ_(t-1) - lr * m̂_t / (√v̂_t + ε)       # Parameter update
-```
-
-**Default values**: β1=0.9, β2=0.999, ε=1e-8
-
-### 5.3 Training Loop
+### 6.2 Training Loop
 
 ```python
 for epoch in range(epochs):
@@ -463,114 +253,25 @@ for epoch in range(epochs):
         optimizer.step()
 ```
 
-**Step-by-step**:
-
-1. `model.train()`: Enables dropout and batch normalization training mode
-
-2. `optimizer.zero_grad()`: Clears gradients from previous iteration (PyTorch accumulates gradients by default)
-
-3. `outputs = model(images)`: Forward pass through the network
-
-4. `loss = criterion(outputs, labels)`: Compute loss value
-
-5. `loss.backward()`: Backpropagation - computes gradients for all parameters using chain rule
-
-6. `optimizer.step()`: Updates parameters using computed gradients
-
-### 5.4 Backpropagation
-
-The chain rule computes gradients layer by layer:
-
-```
-∂L/∂w = ∂L/∂y * ∂y/∂w
-```
-
-For a network with layers f1, f2, f3:
-```
-∂L/∂w1 = ∂L/∂f3 * ∂f3/∂f2 * ∂f2/∂f1 * ∂f1/∂w1
-```
-
-### 5.5 Evaluation Mode
-
-```python
-model.eval()
-with torch.no_grad():
-    # evaluation code
-```
-
-`model.eval()`: Disables dropout and sets batch norm to use running statistics
-
-`torch.no_grad()`: Disables gradient computation for memory efficiency
+Standard PyTorch training: zero gradients, forward pass, compute loss, backward pass, update weights.
 
 ---
 
-## 6. Evaluation Metrics (`evaluate.py`)
+## 7. Evaluation (`evaluate.py`)
 
-### 6.1 Accuracy
+### Metrics
 
-```
-Accuracy = (True Positives + True Negatives) / Total Samples
-```
-
-**Per-class accuracy**:
-```
-Accuracy[c] = Correct predictions for class c / Total samples of class c
-```
-
-### 6.2 Confusion Matrix
-
-A 5x5 matrix where entry (i, j) represents:
-- Number of samples with true label i
-- Predicted as label j
-
-```
-              Predicted
-            0   1   2   3   4
-        0 | TP  .   .   .   . |
-True    1 | .   TP  .   .   . |
-        2 | .   .   TP  .   . |
-        3 | .   .   .   TP  . |
-        4 | .   .   .   .   TP|
-```
-
-Diagonal elements are correct predictions. Off-diagonal elements are misclassifications.
-
-### 6.3 Precision, Recall, F1-Score
-
-**Precision** (per class): Of all predictions for this class, how many were correct?
-```
-Precision[c] = TP[c] / (TP[c] + FP[c])
-```
-
-**Recall** (per class): Of all actual samples of this class, how many did we find?
-```
-Recall[c] = TP[c] / (TP[c] + FN[c])
-```
-
-**F1-Score** (per class): Harmonic mean of precision and recall
-```
-F1[c] = 2 * (Precision[c] * Recall[c]) / (Precision[c] + Recall[c])
-```
-
-### 6.4 Averaging Methods
-
-**Macro F1**: Simple average across classes (treats all classes equally)
-```
-F1_macro = (1/C) * Σ F1[c]
-```
-
-**Weighted F1**: Weighted average by class frequency (accounts for class imbalance)
-```
-F1_weighted = Σ (n[c] / N) * F1[c]
-```
-
-Where n[c] is the number of samples in class c and N is total samples.
+- **Accuracy**: Correct predictions / Total samples
+- **Precision**: TP / (TP + FP) per class
+- **Recall**: TP / (TP + FN) per class
+- **F1-Score**: Harmonic mean of precision and recall
+- **Confusion Matrix**: 5x5 matrix showing prediction distribution
 
 ---
 
-## 7. Experiment Design
+## 8. Experiment Design
 
-### 7.1 Augmentation Experiments
+### 8.1 Augmentation Experiments
 
 Tests 7 configurations:
 1. No augmentation (baseline)
@@ -581,27 +282,19 @@ Tests 7 configurations:
 6. Flip + rotate
 7. All augmentations
 
-**Purpose**: Identify which augmentations help most and find optimal combination.
+### 8.2 Dataset Size Experiments
 
-### 7.2 Dataset Size Experiments
-
-Tests 4 sizes: 50, 100, 200, full dataset
-
-Each size tested with and without augmentation.
-
-**Purpose**:
-- Understand minimum data requirements
-- Measure augmentation benefit at different scales
-- Typically, augmentation helps more with smaller datasets
+Tests 4 sizes: 50, 100, 200, full dataset. Each tested with and without augmentation.
 
 ---
 
-## 8. Technical Specifications
+## 9. Technical Specifications
 
 | Component | Specification |
 |-----------|---------------|
 | Input image size | 64 × 64 × 3 |
-| Color format | BGR (OpenCV) → RGB normalized [0, 1] |
+| Hand detection | MediaPipe Hands 0.10.9 |
+| Bounding box padding | 20 pixels |
 | Batch size | 32 |
 | Learning rate | 0.001 |
 | Optimizer | Adam |
@@ -610,15 +303,19 @@ Each size tested with and without augmentation.
 | Train/test split | 80% / 20% |
 | Dropout rate | 50% |
 | Number of classes | 5 |
-| Total parameters | ~2.19 million |
 
 ---
 
-## 9. File Dependencies
+## 10. File Dependencies
 
 ```
 collect_data.py
-    └── cv2 (OpenCV)
+    ├── cv2 (OpenCV)
+    └── mediapipe
+
+crop_dataset.py
+    ├── cv2 (OpenCV)
+    └── mediapipe
 
 augmentations.py
     ├── cv2 (OpenCV)
@@ -637,8 +334,6 @@ model.py
 
 train.py
     ├── torch
-    ├── torch.nn
-    ├── torch.optim
     ├── model.py
     ├── dataset.py
     └── json
@@ -651,4 +346,11 @@ evaluate.py
     ├── seaborn
     ├── model.py
     └── dataset.py
+
+live_demo.py
+    ├── torch
+    ├── cv2 (OpenCV)
+    ├── numpy
+    ├── mediapipe
+    └── model.py
 ```
