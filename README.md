@@ -78,6 +78,25 @@ This prints:
 - Classification report
 - Confusion matrix (saved as `confusion_matrix.png`)
 
+### Step 4: Live Demo
+
+Test the model in real-time using your webcam:
+
+```bash
+python live_demo.py
+```
+
+Or specify a different model:
+
+```bash
+python live_demo.py model_flip_rotate.pth
+```
+
+Controls:
+- Press `q` to quit
+
+The demo shows the predicted gesture and confidence score on the video feed.
+
 ## File Structure
 
 ```
@@ -88,6 +107,7 @@ hand-gesture-recognition/
 ├── model.py             # CNN architecture
 ├── train.py             # Training and experiments
 ├── evaluate.py          # Evaluation metrics
+├── live_demo.py         # Real-time webcam demo
 ├── dataset/             # Image dataset (created by collect_data.py)
 │   ├── thumbs_up/
 │   ├── thumbs_down/

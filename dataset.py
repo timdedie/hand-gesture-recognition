@@ -52,7 +52,7 @@ def load_dataset(dataset_path="dataset", max_per_class=None):
                 images.append(image)
                 labels.append(class_idx)
 
-    return np.array(images, dtype=object), np.array(labels)
+    return images, np.array(labels)
 
 
 def get_data_loaders(dataset_path="dataset", batch_size=32, augment_list=None, max_per_class=None):

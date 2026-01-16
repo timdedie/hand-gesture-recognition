@@ -1,0 +1,69 @@
+import torch
+import cv2
+import numpy as np
+from model import SimpleCNN
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+class_names = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
+
+
+def load_model(model_path="model_all_augmentations.pth"):
+    model = SimpleCNN(num_classes=5).to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
+    model.eval()
+    return model
+
+
+def preprocess_frame(frame):
+    image = cv2.resize(frame, (64, 64))
+    image = image.astype(np.float32) / 255.0
+    image = np.transpose(image, (2, 0, 1))
+    return torch.tensor(image).unsqueeze(0).to(device)
+
+
+def predict(model, frame):
+    input_tensor = preprocess_frame(frame)
+    with torch.no_grad():
+        output = model(input_tensor)
+        probabilities = torch.softmax(output, dim=1)
+        confidence, prediction = probabilities.max(1)
+    return class_names[prediction.item()], confidence.item()
+
+
+def run_live_demo(model_path="model_all_augmentations.pth"):
+    model = load_model(model_path)
+    cap = cv2.VideoCapture(0)
+
+    if not cap.isOpened():
+        print("Error: Could not open webcam")
+        return
+
+    print("Live demo started. Press 'q' to quit.")
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Error: Could not read frame")
+            break
+
+        frame = cv2.flip(frame, 1)
+        gesture, confidence = predict(model, frame)
+
+        label = f"{gesture} ({confidence:.2f})"
+        cv2.putText(frame, label, (10, 40), cv2.FONT_HERSHEY_SIMPLEX,
+                    1.2, (0, 255, 0), 3)
+
+        cv2.imshow("Hand Gesture Recognition", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    import sys
+    model_path = sys.argv[1] if len(sys.argv) > 1 else "model_all_augmentations.pth"
+    print(f"Loading model: {model_path}")
+    run_live_demo(model_path)
