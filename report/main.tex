@@ -40,22 +40,32 @@ Visual Computing Project Report}
 
 
 \section*{Introduction}
-Shortly describe the task of the project.
-Motivate and give the problem statement of the task.
-Add at least one reference (book \cite{Bridson08}, paper \cite{Zuenko20}, homepage \cite{lighthouse_timer}) via the 'sources.bib' and the 'cite' command.
-One final short paragraph about the own solution and the final results.
-Include also one sentence that outlines what each team member contributed.
+\textbf{Task.} This project builds a real-time hand gesture recognition pipeline that detects a hand in webcam frames and classifies it into five discrete gestures (thumbs up, thumbs down, peace, open palm, or no hand). The goal is to deliver a lightweight end-to-end system that can be trained on a small custom dataset and run interactively.
+
+\textbf{Motivation and problem statement.} Hand gestures are a natural, device-free interface for HCI, but reliable recognition must handle varying backgrounds, lighting, and hand sizes while keeping latency low. The problem we address is: given a live RGB stream, automatically localize the hand and predict the gesture class with high accuracy and stable real-time performance, following evaluation practices used in interactive graphics pipelines \cite{lighthouse_timer}.
+
+\textbf{Own solution and results.} We combine MediaPipe-based hand detection to crop the region of interest with a compact CNN trained on our collected dataset, plus augmentation to improve robustness. The system reaches consistent classification on the five gestures and supports a live demo; detailed quantitative results and a confusion matrix are reported in the Results section.
+
+\textbf{Contributions.} Tim Dedie implemented the data collection pipeline and augmentation experiments; Nick Somitsch implemented the CNN, training/evaluation scripts, and the live demo.
 
 \section*{Background}
-Shortly describe the necessary theory, e.g.~Blinn-Phong illumination model, fourier transformation, Gaussian blur.
-Show the employed theoretical formulas and/or more specialized math.
+\textbf{Hand detection and preprocessing.} We use MediaPipe Hands to localize the hand via landmark-based detection and derive a bounding box for cropping. The cropped region is resized to $64 \times 64$ RGB and normalized, which reduces background clutter and gives a consistent input scale for the classifier.
+
+\textbf{CNN-based classification.} Convolutional layers learn local edge and texture patterns, ReLU introduces non-linearity, and max-pooling builds spatial invariance. The final fully connected layers map the features to five gesture classes using a softmax output. The prediction and training objective are:
 \begin{align}
-    I_S = k_S M_S I_L \left( \cos \frac{\phi}{2} \right)^m = k_S M_S I_L \left( \mathbf{n} \cdot \mathbf{h} \right)^m
+    p_i = \frac{\exp(z_i)}{\sum_j \exp(z_j)}, \quad
+    \mathcal{L} = -\sum_i y_i \log p_i
 \end{align}
+where $z_i$ are logits, $p_i$ the class probabilities, and $y_i$ one-hot labels.
+
+\textbf{Data augmentation.} Random flips, rotations, brightness changes, blur, color jitter, and zoom improve robustness to viewpoint and illumination changes by exposing the network to plausible variations during training.
 
 \section*{Method}
-Describe the method(s), or most essential part(s) of the method you used to solve the task.
-Also, some \textbf{short} implementation notes can be added here. Cite your sources accordingly.
+\textbf{Pipeline overview.} Each frame from the webcam is processed by MediaPipe Hands to detect landmarks and a bounding box; we crop the hand region with padding, resize to $64 \times 64$, and normalize. The cropped images are stored per class and later loaded by a custom dataset class that performs stratified train/test splitting.
+
+\textbf{Model and training.} The classifier is a compact CNN with three convolutional blocks (Conv--ReLU--MaxPool), followed by a 256-unit fully connected layer and dropout before the final 5-way softmax. We train with cross-entropy loss using mini-batches and evaluate several augmentation settings (flip, rotation, brightness, blur, color jitter, zoom) as well as different dataset sizes to assess robustness.
+
+\textbf{Evaluation and demo.} After training, we compute accuracy, F1-score, and a confusion matrix on the held-out test set. The best-performing model is used in a live demo that overlays the predicted class and confidence on the webcam stream. Figure~\ref{fig:blur_pipeline} summarizes the processing flow.
 %
 \begin{figure}[!b]
  \includegraphics[width=1.0\columnwidth]{images/blur_pipeline.png}
