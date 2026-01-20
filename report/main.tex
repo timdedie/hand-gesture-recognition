@@ -6,6 +6,8 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
 
 
 \title{
@@ -19,18 +21,6 @@
 Visual Computing Project Report}
 \author{Tim Dedie \& Nick Somitsch}
 
-%-- more dense bibstyle
-\let\oldthebibliography\thebibliography
-\let\endoldthebibliography\endthebibliography
-\renewenvironment{thebibliography}[1]{
-  \begin{oldthebibliography}{#1}
-    \setlength{\itemsep}{0em}
-    \setlength{\parskip}{0em}
-}
-{
-  \end{oldthebibliography}
-}
-
 \begin{document}
 
 
@@ -40,72 +30,145 @@ Visual Computing Project Report}
 
 
 \section*{Introduction}
-\textbf{Task.} This project builds a real-time hand gesture recognition pipeline that detects a hand in webcam frames and classifies it into five discrete gestures (thumbs up, thumbs down, peace, open palm, or no hand). The goal is to deliver a lightweight end-to-end system that can be trained on a small custom dataset and run interactively.
+\textbf{Task.} We built a system that recognizes hand gestures from a webcam feed. It classifies five gestures: thumbs up, thumbs down, peace sign, open palm, and no hand.
 
-\textbf{Motivation and problem statement.} Hand gestures are a natural, device-free interface for HCI, but reliable recognition must handle varying backgrounds, lighting, and hand sizes while keeping latency low. The problem we address is: given a live RGB stream, automatically localize the hand and predict the gesture class with high accuracy and stable real-time performance, following evaluation practices used in interactive graphics pipelines \cite{lighthouse_timer}.
+\textbf{Problem.} Our first attempts didn't work well. We fed full webcam frames into the network and the model just learned to recognize the background instead of the actual hand gestures. If we recorded thumbs up in front of a bookshelf, the model associated "bookshelf" with thumbs up. This was frustrating until we realized we needed to crop out just the hand first.
 
-\textbf{Own solution and results.} We combine MediaPipe-based hand detection to crop the region of interest with a compact CNN trained on our collected dataset, plus augmentation to improve robustness. The system reaches consistent classification on the five gestures and supports a live demo; detailed quantitative results and a confusion matrix are reported in the Results section.
+\textbf{Solution.} We use Google's MediaPipe to detect and crop the hand region, then feed that cropped image to a CNN for classification. With this approach and the right augmentation settings, we got 100\% accuracy on our test set.
 
-\textbf{Contributions.} Tim Dedie implemented the data collection pipeline and augmentation experiments; Nick Somitsch implemented the CNN, training/evaluation scripts, and the live demo.
+\textbf{Contributions.} Tim: data collection and augmentation experiments. Nick: CNN implementation, training scripts, and live demo.
 
 \section*{Background}
-\textbf{Hand detection and preprocessing.} We use MediaPipe Hands to localize the hand via landmark-based detection and derive a bounding box for cropping. The cropped region is resized to $64 \times 64$ RGB and normalized, which reduces background clutter and gives a consistent input scale for the classifier.
+\textbf{Why MediaPipe?} MediaPipe Hands is a pre-trained model from Google that detects 21 landmarks on a hand (fingertips, knuckles, palm, etc.). We use these points to draw a bounding box around the hand and crop it out. This way our CNN only sees the hand, not the background.
 
-\textbf{CNN-based classification.} Convolutional layers learn local edge and texture patterns, ReLU introduces non-linearity, and max-pooling builds spatial invariance. The final fully connected layers map the features to five gesture classes using a softmax output. The prediction and training objective are:
+\textbf{Our CNN architecture.} We use a simple CNN with three convolutional blocks:
+\begin{itemize}
+    \item Input: $64 \times 64$ RGB image (3 channels)
+    \item Conv1: 3 $\rightarrow$ 32 filters, $3\times3$ kernel, ReLU, MaxPool $\rightarrow$ output $32 \times 32$
+    \item Conv2: 32 $\rightarrow$ 64 filters, $3\times3$ kernel, ReLU, MaxPool $\rightarrow$ output $16 \times 16$
+    \item Conv3: 64 $\rightarrow$ 128 filters, $3\times3$ kernel, ReLU, MaxPool $\rightarrow$ output $8 \times 8$
+    \item Flatten: $128 \times 8 \times 8 = 8192$ features
+    \item FC1: 8192 $\rightarrow$ 256, ReLU, Dropout (50\%)
+    \item FC2: 256 $\rightarrow$ 5 (one per gesture class)
+\end{itemize}
+Total: about 2.19 million parameters.
+
+\textbf{Loss function.} We use softmax and cross-entropy:
 \begin{align}
     p_i = \frac{\exp(z_i)}{\sum_j \exp(z_j)}, \quad
     \mathcal{L} = -\sum_i y_i \log p_i
 \end{align}
-where $z_i$ are logits, $p_i$ the class probabilities, and $y_i$ one-hot labels.
 
-\textbf{Data augmentation.} Random flips, rotations, brightness changes, blur, color jitter, and zoom improve robustness to viewpoint and illumination changes by exposing the network to plausible variations during training.
+\textbf{Augmentations.} We implemented these ourselves with OpenCV (no torchvision):
+\begin{itemize}
+    \item Horizontal flip -- mirrors the image
+    \item Rotation -- random angle between $-30°$ and $+30°$
+    \item Brightness -- multiply by random factor 0.5 to 1.5
+    \item Gaussian blur -- kernel size 3, 5, or 7
+    \item Color jitter -- shift hue and saturation in HSV
+    \item Zoom -- scale up and crop center
+\end{itemize}
+Each augmentation is applied with 50\% probability during training.
 
 \section*{Method}
-\textbf{Pipeline overview.} Each frame from the webcam is processed by MediaPipe Hands to detect landmarks and a bounding box; we crop the hand region with padding, resize to $64 \times 64$, and normalize. The cropped images are stored per class and later loaded by a custom dataset class that performs stratified train/test splitting.
+\textbf{Data collection.} We wrote a script that:
+\begin{enumerate}
+    \item Captures webcam frames
+    \item Runs MediaPipe to find the hand
+    \item Crops the hand region with 20px padding
+    \item Saves to folders (one per gesture class)
+\end{enumerate}
+We collected around 300 images per class. For "no hand" we just saved the full frame.
 
-\textbf{Model and training.} The classifier is a compact CNN with three convolutional blocks (Conv--ReLU--MaxPool), followed by a 256-unit fully connected layer and dropout before the final 5-way softmax. We train with cross-entropy loss using mini-batches and evaluate several augmentation settings (flip, rotation, brightness, blur, color jitter, zoom) as well as different dataset sizes to assess robustness.
+\textbf{Preprocessing pipeline:}
+\begin{enumerate}
+    \item Load image with OpenCV
+    \item Apply augmentation (50\% chance, training only)
+    \item Resize to $64 \times 64$
+    \item Normalize to $[0, 1]$
+    \item Convert from HWC to CHW format
+\end{enumerate}
 
-\textbf{Evaluation and demo.} After training, we compute accuracy, F1-score, and a confusion matrix on the held-out test set. The best-performing model is used in a live demo that overlays the predicted class and confidence on the webcam stream. Figure~\ref{fig:blur_pipeline} summarizes the processing flow.
-%
-\begin{figure}[!b]
- \includegraphics[width=1.0\columnwidth]{images/blur_pipeline.png}
- \centering
- \caption{Abstract render pass pipeline for \emph{post-process depth-of-field}}
- \label{fig:blur_pipeline}
-\end{figure}
+\textbf{Training setup:}
+\begin{itemize}
+    \item Optimizer: Adam, learning rate 0.001
+    \item Loss: CrossEntropyLoss
+    \item Epochs: 20
+    \item Batch size: 32
+    \item Train/test split: 80/20, stratified, seed 42
+\end{itemize}
+
+\textbf{Experiments.} We ran two sets of experiments:
+\begin{enumerate}
+    \item \textit{Augmentation comparison}: no augmentation, single augmentations (flip, rotate, brightness, blur), flip+rotate combined, all augmentations
+    \item \textit{Dataset size}: 50, 100, 200, and full samples per class, with and without augmentation
+\end{enumerate}
 
 \section*{Results}
-Describe the experiments/scene.
-If there are visual results show some images; make sure they are of importance.
-If there are measurements possible for demonstration add plots; e.g.~accuracy of classification or GPU runtime for each frame with \texttt{OpenGL Timer Query} \cite{lighthouse_timer}.
-%
+\textbf{Augmentation results.} Table~\ref{tab:augmentation} shows that flip+rotate gives the best results -- even better than using all augmentations together.
+
+\begin{table}[h]
+\centering
+\caption{Test accuracy by augmentation}
+\label{tab:augmentation}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Config & Accuracy \\
+\midrule
+None & 98.33\% \\
+Flip only & 96.33\% \\
+Rotate only & 97.67\% \\
+Brightness only & 98.00\% \\
+Blur only & 98.67\% \\
+Flip + Rotate & \textbf{100.00\%} \\
+All & 99.67\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Dataset size results.} Table~\ref{tab:datasize} shows augmentation helps a lot when you have little data (90\% $\rightarrow$ 98\% with only 50 samples). With enough data, augmentation matters less.
+
+\begin{table}[h]
+\centering
+\caption{Test accuracy by dataset size}
+\label{tab:datasize}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Samples/class & No Aug & With Aug \\
+\midrule
+50 & 90.00\% & 98.00\% \\
+100 & 98.00\% & 97.00\% \\
+200 & 99.00\% & 97.50\% \\
+Full ($\sim$300) & 100.00\% & 99.67\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Confusion matrix.} Figure~\ref{fig:conf_matrix} shows the confusion matrix for our best model. No misclassifications.
+
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.4\textwidth]{images/confusion_matrix.png}
-    \caption{Normalized Confusion Matrix}
+    \includegraphics[width=0.95\columnwidth]{images/confusion_matrix.png}
+    \caption{Confusion matrix for flip+rotate model}
     \label{fig:conf_matrix}
 \end{figure}
 
 \section*{Conclusion}
-Summarize what was done.
-Also add some of your findings, challenges, and problems you encountered. 
-What are the limits?
-What could be improved?\\
-~\\
-\textbf{More remarks:}
-Do not modify the layout (font, margins, etc.).
-Avoid subsections and prefer a bold paragraph start.
-Try to write complete but \mbox{succinct}.
-Follow the section layout: introduction, background, method, results, and conclusion.
-But, feel free to adjust if it makes sense. \\
-~\\
-\textbf{Amount:} The report must have 4 \textbf{filled} pages (\textbf{without references}); Use a reasonable amount and size for images and plots.
+\textbf{What worked.} The biggest improvement came from adding hand cropping with MediaPipe. Before that, the model was basically useless. The flip+rotate augmentation combo worked best, probably because gestures can appear at different angles and orientations.
 
-\bibliographystyle{plain}
-\bibliography{sources}{}
+\textbf{What we struggled with.}
+\begin{itemize}
+    \item Initially had no idea why accuracy was bad -- turned out the model was learning backgrounds
+    \item MediaPipe version issues (newer versions removed the API we needed, had to pin to 0.10.9)
+    \item More augmentations didn't mean better results -- all augmentations actually performed slightly worse than just flip+rotate
+\end{itemize}
 
-%\bibliographystyle{ieeetr}
-
-
+\textbf{Limitations.}
+\begin{itemize}
+    \item Only 5 gestures
+    \item Single hand only
+    \item Needs decent lighting for MediaPipe to work
+    \item Trained on our hands only -- might not generalize to other people
+\end{itemize}
 
 \end{document}
