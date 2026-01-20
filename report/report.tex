@@ -8,6 +8,7 @@
 \usepackage{amssymb}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{float}
 
 
 \title{
@@ -30,7 +31,14 @@ Visual Computing Project Report}
 
 
 \section*{Introduction}
-\textbf{Task.} We built a system that recognizes hand gestures from a webcam feed. It classifies five gestures: thumbs up, thumbs down, peace sign, open palm, and no hand.
+\textbf{Task.} We built a system that recognizes hand gestures from a webcam feed. It classifies five gestures: thumbs up, thumbs down, peace sign, open palm, and no hand (Figure~\ref{fig:gestures}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/gesture_samples.png}
+    \caption{The five gesture classes our system recognizes.}
+    \label{fig:gestures}
+\end{figure}
 
 \textbf{Problem.} Our first attempts didn't work well. We fed full webcam frames into the network and the model just learned to recognize the background instead of the actual hand gestures. If we recorded thumbs up in front of a bookshelf, the model associated "bookshelf" with thumbs up. This was frustrating until we realized we needed to crop out just the hand first.
 
@@ -51,7 +59,14 @@ Visual Computing Project Report}
     \item FC1: 8192 $\rightarrow$ 256, ReLU, Dropout (50\%)
     \item FC2: 256 $\rightarrow$ 5 (one per gesture class)
 \end{itemize}
-Total: about 2.19 million parameters.
+Total: about 2.19 million parameters. Figure~\ref{fig:architecture} shows the full architecture.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/architecture.png}
+    \caption{Our SimpleCNN architecture.}
+    \label{fig:architecture}
+\end{figure}
 
 \textbf{Loss function.} We use softmax and cross-entropy:
 \begin{align}
@@ -68,9 +83,25 @@ Total: about 2.19 million parameters.
     \item Color jitter -- shift hue and saturation in HSV
     \item Zoom -- scale up and crop center
 \end{itemize}
-Each augmentation is applied with 50\% probability during training.
+Each augmentation is applied with 50\% probability during training. Figure~\ref{fig:augmentations} shows examples of each augmentation applied to the same image.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/augmentation_examples.png}
+    \caption{Examples of our data augmentations.}
+    \label{fig:augmentations}
+\end{figure}
 
 \section*{Method}
+Figure~\ref{fig:pipeline} shows our complete pipeline from webcam input to gesture classification.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/pipeline.png}
+    \caption{Our hand gesture recognition pipeline.}
+    \label{fig:pipeline}
+\end{figure}
+
 \textbf{Data collection.} We wrote a script that:
 \begin{enumerate}
     \item Captures webcam frames
@@ -97,6 +128,14 @@ We collected around 300 images per class. For "no hand" we just saved the full f
     \item Batch size: 32
     \item Train/test split: 80/20, stratified, seed 42
 \end{itemize}
+Figure~\ref{fig:training_curves} shows how the models learn over time. All configurations converge within 20 epochs.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/training_curves.png}
+    \caption{Training and test loss/accuracy over 20 epochs.}
+    \label{fig:training_curves}
+\end{figure}
 
 \textbf{Experiments.} We ran two sets of experiments:
 \begin{enumerate}
@@ -105,9 +144,9 @@ We collected around 300 images per class. For "no hand" we just saved the full f
 \end{enumerate}
 
 \section*{Results}
-\textbf{Augmentation results.} Table~\ref{tab:augmentation} shows that flip+rotate gives the best results -- even better than using all augmentations together.
+\textbf{Augmentation results.} Table~\ref{tab:augmentation} and Figure~\ref{fig:aug_comparison} show that flip+rotate gives the best results -- even better than using all augmentations together.
 
-\begin{table}[h]
+\begin{table}[H]
 \centering
 \caption{Test accuracy by augmentation}
 \label{tab:augmentation}
@@ -126,9 +165,25 @@ All & 99.67\% \\
 \end{tabular}
 \end{table}
 
-\textbf{Dataset size results.} Table~\ref{tab:datasize} shows augmentation helps a lot when you have little data (90\% $\rightarrow$ 98\% with only 50 samples). With enough data, augmentation matters less.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\columnwidth]{images/augmentation_comparison.png}
+    \caption{Test accuracy comparison across augmentation strategies. Flip+rotate achieves 100\% accuracy.}
+    \label{fig:aug_comparison}
+\end{figure}
 
-\begin{table}[h]
+Figure~\ref{fig:conf_matrix} shows the confusion matrix for our best model (flip+rotate). No misclassifications.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{images/confusion_matrix.png}
+    \caption{Confusion matrix for flip+rotate model.}
+    \label{fig:conf_matrix}
+\end{figure}
+
+\textbf{Dataset size results.} Table~\ref{tab:datasize} and Figure~\ref{fig:dataset_size} show that augmentation helps a lot when you have little data (90\% $\rightarrow$ 98\% with only 50 samples). With enough data, augmentation matters less.
+
+\begin{table}[H]
 \centering
 \caption{Test accuracy by dataset size}
 \label{tab:datasize}
@@ -144,13 +199,11 @@ Full ($\sim$300) & 100.00\% & 99.67\% \\
 \end{tabular}
 \end{table}
 
-\textbf{Confusion matrix.} Figure~\ref{fig:conf_matrix} shows the confusion matrix for our best model. No misclassifications.
-
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=0.95\columnwidth]{images/confusion_matrix.png}
-    \caption{Confusion matrix for flip+rotate model}
-    \label{fig:conf_matrix}
+    \includegraphics[width=\columnwidth]{images/dataset_size_effect.png}
+    \caption{Impact of dataset size on accuracy. Augmentation provides an 8\% boost with only 50 samples per class.}
+    \label{fig:dataset_size}
 \end{figure}
 
 \section*{Conclusion}
