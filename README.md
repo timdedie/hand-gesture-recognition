@@ -13,10 +13,10 @@ A CNN-based hand gesture recognition system that classifies 5 gesture types usin
 ## Setup
 
 ```bash
-uv venv .venv --python 3.11
-source .venv/bin/activate
-uv pip install -e .
+uv sync
 ```
+
+This automatically creates a virtual environment with Python 3.11 (from `.python-version`) and installs all dependencies.
 
 ## Usage
 
@@ -27,7 +27,7 @@ All scripts should be run from the repository root directory.
 Run the data collection script to capture images using your webcam:
 
 ```bash
-python collect_data.py
+uv run collect_data.py
 ```
 
 Controls:
@@ -45,7 +45,7 @@ The script uses MediaPipe to detect your hand and saves only the cropped hand re
 Run training with all experiments:
 
 ```bash
-python train.py
+uv run train.py
 ```
 
 This runs two types of experiments:
@@ -70,13 +70,13 @@ Results are saved to `results.json` and models are saved as `model_*.pth` files.
 Evaluate the default trained model:
 
 ```bash
-python evaluate.py
+uv run evaluate.py
 ```
 
 Or specify a different model:
 
 ```bash
-python evaluate.py models/model_flip_rotate.pth
+uv run evaluate.py models/model_flip_rotate.pth
 ```
 
 This prints:
@@ -91,77 +91,16 @@ This prints:
 Test the default model in real-time using your webcam:
 
 ```bash
-python live_demo.py
+uv run live_demo.py
 ```
 
 Or specify a different model:
 
 ```bash
-python live_demo.py models/model_flip_rotate.pth
+uv run live_demo.py models/model_flip_rotate.pth
 ```
 
 Controls:
 - Press `q` to quit
 
 The demo detects your hand with a bounding box and shows the predicted gesture and confidence score.
-
-## File Structure
-
-```
-hand-gesture-recognition/
-├── collect_data.py      # Webcam capture with hand detection
-├── augmentations.py     # Custom augmentation functions
-├── dataset.py           # Data loading and splitting
-├── model.py             # CNN architecture
-├── train.py             # Training and experiments
-├── evaluate.py          # Evaluation metrics
-├── live_demo.py         # Real-time webcam demo
-├── dataset/             # Image dataset (created by collect_data.py)
-│   ├── thumbs_up/
-│   ├── thumbs_down/
-│   ├── peace/
-│   ├── open_palm/
-│   └── no_hand/
-├── models/              # Trained models (created by train.py)
-│   └── model_*.pth
-└── results.json         # Experiment results (created by train.py)
-```
-
-## Model Architecture
-
-Simple CNN with 3 convolutional layers:
-
-- Conv2D(3, 32) -> ReLU -> MaxPool
-- Conv2D(32, 64) -> ReLU -> MaxPool
-- Conv2D(64, 128) -> ReLU -> MaxPool
-- Flatten -> Dense(256) -> Dropout(0.5) -> Dense(5)
-
-Input size: 64x64 RGB images
-
-## Hand Detection
-
-MediaPipe Hands is used to:
-- Detect hand presence in the frame
-- Extract bounding box coordinates from hand landmarks
-- Crop the hand region with 20px padding
-
-This ensures the model learns hand features rather than background.
-
-## Augmentations
-
-Custom implementations using OpenCV:
-
-| Augmentation | Description |
-|--------------|-------------|
-| Horizontal flip | Mirrors the image |
-| Rotation | Random rotation between -30 and 30 degrees |
-| Brightness | Random brightness factor between 0.5 and 1.5 |
-| Gaussian blur | Random kernel size (3, 5, or 7) |
-| Color jitter | Random hue and saturation adjustment |
-| Zoom | Random zoom factor between 1.0 and 1.3 |
-
-## Data Split
-
-- 80% training data
-- 20% test data
-- Stratified split to maintain class balance

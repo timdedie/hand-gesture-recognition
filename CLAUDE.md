@@ -10,19 +10,17 @@ CNN-based hand gesture recognition system that classifies 5 gestures (thumbs up,
 
 ### Setup
 ```bash
-uv venv .venv --python 3.12
-source .venv/bin/activate
-uv pip install -e .
+uv sync  # Creates venv with Python 3.11 (from .python-version) and installs dependencies
 ```
 
 ### Run Scripts
 ```bash
-python collect_data.py                    # Collect training images via webcam (keys 1-5 save, q quits)
-python train.py                           # Run all training experiments (augmentation + dataset size)
-python evaluate.py                        # Evaluate default model
-python evaluate.py models/model_*.pth     # Evaluate a specific model
-python live_demo.py                       # Run real-time demo with default model
-python live_demo.py models/model_*.pth    # Run real-time demo with specific model
+uv run collect_data.py                    # Collect training images via webcam (keys 1-5 save, q quits)
+uv run train.py                           # Run all training experiments (augmentation + dataset size)
+uv run evaluate.py                        # Evaluate default model
+uv run evaluate.py models/model_*.pth     # Evaluate a specific model
+uv run live_demo.py                       # Run real-time demo with default model
+uv run live_demo.py models/model_*.pth    # Run real-time demo with specific model
 ```
 
 No test suite exists - validation is done via `evaluate.py` metrics and `live_demo.py` visual testing.
