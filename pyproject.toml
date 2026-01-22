@@ -1,12 +1,8 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "hand-gesture-recognition"
 version = "0.1.0"
 description = "Hand gesture recognition using CNN"
-requires-python = "==3.11.*"
+requires-python = ">=3.11"
 dependencies = [
     "opencv-python",
     "numpy",
@@ -16,6 +12,3 @@ dependencies = [
     "seaborn",
     "mediapipe==0.10.9",
 ]
-
-[tool.setuptools.packages.find]
-where = ["."]
