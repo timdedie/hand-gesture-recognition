@@ -40,17 +40,22 @@ def main():
         ("Zoom", zoom(original, factor=1.25)),
     ]
 
-    # Create figure
-    fig, axes = plt.subplots(1, 7, figsize=(18, 3.5))
+    # Create figure with 2 rows x 4 columns (7 augmentations + 1 empty cell)
+    fig, axes = plt.subplots(2, 4, figsize=(12, 7))
+    axes = axes.flatten()
 
-    for ax, (name, img) in zip(axes, augmentations):
+    for i, (name, img) in enumerate(augmentations):
+        ax = axes[i]
         # Convert BGR to RGB for display
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         ax.imshow(img_rgb)
         ax.set_title(name, fontsize=12, fontweight="bold", pad=8)
         ax.axis("off")
 
-    plt.suptitle("Data Augmentation Examples", fontsize=14, fontweight="bold", y=1.05)
+    # Hide the empty 8th cell
+    axes[7].axis("off")
+
+    plt.suptitle("Data Augmentation Examples", fontsize=14, fontweight="bold", y=0.98)
     plt.tight_layout()
 
     # Save

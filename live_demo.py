@@ -11,6 +11,7 @@ class_names = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
 DEFAULT_MODEL_PATH = "models/model_all_augmentations.pth"
 
 
+# loads trained model from file
 def load_model(model_path=DEFAULT_MODEL_PATH):
     model = SimpleCNN(num_classes=5).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
@@ -18,6 +19,7 @@ def load_model(model_path=DEFAULT_MODEL_PATH):
     return model
 
 
+# prepares frame for model input
 def preprocess_frame(frame):
     image = cv2.resize(frame, (64, 64))
     image = image.astype(np.float32) / 255.0
@@ -25,6 +27,7 @@ def preprocess_frame(frame):
     return torch.tensor(image).unsqueeze(0).to(device)
 
 
+# runs inference and returns gesture name with confidence
 def predict(model, frame):
     input_tensor = preprocess_frame(frame)
     with torch.no_grad():
@@ -34,9 +37,11 @@ def predict(model, frame):
     return class_names[prediction.item()], confidence.item()
 
 
+# main loop that captures webcam and shows predictions
 def run_live_demo(model_path=DEFAULT_MODEL_PATH):
     model = load_model(model_path)
 
+    # setup mediapipe for hand detection
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5)
 
@@ -61,6 +66,7 @@ def run_live_demo(model_path=DEFAULT_MODEL_PATH):
         gesture = "no_hand"
         confidence = 1.0
 
+        # if hand found, crop it and run prediction
         if results.multi_hand_landmarks:
             landmarks = results.multi_hand_landmarks[0]
             x_coords = [lm.x for lm in landmarks.landmark]

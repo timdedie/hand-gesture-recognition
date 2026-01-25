@@ -2,6 +2,7 @@ import cv2
 import os
 import mediapipe as mp
 
+# script for collecting training images from webcam
 dataset_path = "dataset"
 classes = {
     '1': 'thumbs_up',
@@ -14,6 +15,7 @@ classes = {
 for class_name in classes.values():
     os.makedirs(os.path.join(dataset_path, class_name), exist_ok=True)
 
+# setup mediapipe hand detection
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5)
 
@@ -34,6 +36,7 @@ while True:
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(rgb_frame)
 
+    # extract hand bounding box with 20px padding
     hand_crop = None
     if results.multi_hand_landmarks:
         landmarks = results.multi_hand_landmarks[0]
@@ -66,6 +69,7 @@ while True:
 
     key = cv2.waitKey(1) & 0xFF
 
+    # save image when 1-5 pressed, q to quit
     if key == ord('q'):
         break
     elif chr(key) in classes:

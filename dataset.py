@@ -9,6 +9,7 @@ import random
 
 DEFAULT_DATASET_PATH = "dataset"
 
+# custom dataset class for loading gesture images
 class GestureDataset(Dataset):
     def __init__(self, images, labels, augment_list=None, augment_prob=0.5):
         self.images = images
@@ -23,9 +24,11 @@ class GestureDataset(Dataset):
         image = self.images[idx].copy()
         label = self.labels[idx]
 
+        # apply augmentation with 50% probability during training
         if self.augment_list and random.random() < self.augment_prob:
             image = apply_augmentations(image, self.augment_list)
 
+        # resize, normalize to 0-1, and convert hwc to chw for pytorch
         image = cv2.resize(image, (64, 64))
         image = image.astype(np.float32) / 255.0
         image = np.transpose(image, (2, 0, 1))
@@ -33,6 +36,7 @@ class GestureDataset(Dataset):
         return torch.tensor(image), torch.tensor(label)
 
 
+# loads images from the dataset folder
 def load_dataset(dataset_path=None, max_per_class=None):
     if dataset_path is None:
         dataset_path = DEFAULT_DATASET_PATH
@@ -59,6 +63,7 @@ def load_dataset(dataset_path=None, max_per_class=None):
     return images, np.array(labels)
 
 
+# creates train and test dataloaders with 80/20 stratified split
 def get_data_loaders(dataset_path=None, batch_size=32, augment_list=None, max_per_class=None):
     if dataset_path is None:
         dataset_path = DEFAULT_DATASET_PATH

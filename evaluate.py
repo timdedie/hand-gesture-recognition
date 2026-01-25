@@ -13,6 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class_names = ['thumbs_up', 'thumbs_down', 'peace', 'open_palm', 'no_hand']
 
 
+# loads a model and runs it on the test set
 def evaluate_model(model_path=DEFAULT_MODEL_PATH):
     model = SimpleCNN(num_classes=5).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
@@ -38,6 +39,7 @@ def evaluate_model(model_path=DEFAULT_MODEL_PATH):
     return all_preds, all_labels
 
 
+# prints accuracy, f1 scores, and per-class metrics
 def print_metrics(y_true, y_pred):
     print("\n" + "="*50)
     print("EVALUATION RESULTS")
@@ -62,6 +64,7 @@ def print_metrics(y_true, y_pred):
     print(classification_report(y_true, y_pred, target_names=class_names))
 
 
+# generates and saves confusion matrix heatmap
 def plot_confusion_matrix(y_true, y_pred, save_path="confusion_matrix.png"):
     cm = confusion_matrix(y_true, y_pred)
 

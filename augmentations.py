@@ -2,9 +2,11 @@ import cv2
 import numpy as np
 import random
 
+# flips image horizontally
 def horizontal_flip(image):
     return cv2.flip(image, 1)
 
+# rotates by random angle between -30 and 30 degrees
 def rotate(image, angle=None):
     if angle is None:
         angle = random.uniform(-30, 30)
@@ -13,6 +15,7 @@ def rotate(image, angle=None):
     matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
     return cv2.warpAffine(image, matrix, (w, h))
 
+# changes brightness by modifying the v channel in hsv
 def adjust_brightness(image, factor=None):
     if factor is None:
         factor = random.uniform(0.5, 1.5)
@@ -23,11 +26,13 @@ def adjust_brightness(image, factor=None):
     hsv = hsv.astype(np.uint8)
     return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
+# applies blur with random kernel size
 def gaussian_blur(image, kernel_size=None):
     if kernel_size is None:
         kernel_size = random.choice([3, 5, 7])
     return cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
 
+# randomly shifts hue and saturation
 def color_jitter(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     hsv = hsv.astype(np.float32)
@@ -36,6 +41,7 @@ def color_jitter(image):
     hsv = hsv.astype(np.uint8)
     return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
+# zooms in and crops to original size
 def zoom(image, factor=None):
     if factor is None:
         factor = random.uniform(1.0, 1.3)

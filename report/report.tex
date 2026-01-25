@@ -1,5 +1,4 @@
 \documentclass[11pt, a4paper, twocolumn]{article}
-\usepackage[utf8]{inputenc}
 \usepackage{url}
 \usepackage{hyperref}
 \usepackage[margin=1.5cm]{geometry}
@@ -31,6 +30,7 @@ Visual Computing Project Report}
 
 
 \section*{Introduction}
+\vspace{0.2cm}
 \textbf{Task.} We built a system that recognizes hand gestures from a webcam feed. It classifies five gestures: thumbs up, thumbs down, peace sign, open palm, and no hand (Figure~\ref{fig:gestures}).
 
 \begin{figure}[H]
@@ -44,9 +44,10 @@ Visual Computing Project Report}
 
 \textbf{Solution.} We use Google's MediaPipe to detect and crop the hand region, then feed that cropped image to a CNN for classification. With this approach and the right augmentation settings, we got 100\% accuracy on our test set.
 
-\textbf{Contributions.} Tim: data collection and augmentation experiments. Nick: CNN implementation, training scripts, and live demo.
+\textbf{Contributions.} Tim designed and implemented the CNN architecture, wrote the training and evaluation scripts, and developed the real-time webcam demo with MediaPipe integration. Nick handled data collection by setting up the webcam capture workflow, built the preprocessing pipeline with custom augmentation functions, and ran experiments to determine which augmentation combinations worked best.
 
 \section*{Background}
+\vspace{0.2cm}
 \textbf{Why MediaPipe?} MediaPipe Hands is a pre-trained model from Google that detects 21 landmarks on a hand (fingertips, knuckles, palm, etc.). We use these points to draw a bounding box around the hand and crop it out. This way our CNN only sees the hand, not the background.
 
 \textbf{Our CNN architecture.} We use a simple CNN with three convolutional blocks:
@@ -93,6 +94,7 @@ Each augmentation is applied with 50\% probability during training. Figure~\ref{
 \end{figure}
 
 \section*{Method}
+\vspace{0.2cm}
 Figure~\ref{fig:pipeline} shows our complete pipeline from webcam input to gesture classification.
 
 \begin{figure}[H]
@@ -132,7 +134,7 @@ Figure~\ref{fig:training_curves} shows how the models learn over time. All confi
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\columnwidth]{images/training_curves.png}
+    \includegraphics[width=1.1\columnwidth]{images/training_curves.png}
     \caption{Training and test loss/accuracy over 20 epochs.}
     \label{fig:training_curves}
 \end{figure}
@@ -144,7 +146,8 @@ Figure~\ref{fig:training_curves} shows how the models learn over time. All confi
 \end{enumerate}
 
 \section*{Results}
-\textbf{Augmentation results.} Table~\ref{tab:augmentation} and Figure~\ref{fig:aug_comparison} show that flip+rotate gives the best results -- even better than using all augmentations together.
+\vspace{0.2cm}
+\textbf{Augmentation results.} Table~\ref{tab:augmentation} and Figure~\ref{fig:aug_comparison} show that flip+rotate gives the best results. Even better than using all augmentations together.
 
 \begin{table}[H]
 \centering
@@ -207,13 +210,14 @@ Full ($\sim$300) & 100.00\% & 99.67\% \\
 \end{figure}
 
 \section*{Conclusion}
+\vspace{0.2cm}
 \textbf{What worked.} The biggest improvement came from adding hand cropping with MediaPipe. Before that, the model was basically useless. The flip+rotate augmentation combo worked best, probably because gestures can appear at different angles and orientations.
 
 \textbf{What we struggled with.}
 \begin{itemize}
-    \item Initially had no idea why accuracy was bad -- turned out the model was learning backgrounds
+    \item Initially had no idea why accuracy was bad. Turned out the model was learning backgrounds
     \item MediaPipe version issues (newer versions removed the API we needed, had to pin to 0.10.9)
-    \item More augmentations didn't mean better results -- all augmentations actually performed slightly worse than just flip+rotate
+    \item More augmentations didn't mean better results. All augmentations actually performed slightly worse than just flip+rotate
 \end{itemize}
 
 \textbf{Limitations.}
@@ -221,7 +225,16 @@ Full ($\sim$300) & 100.00\% & 99.67\% \\
     \item Only 5 gestures
     \item Single hand only
     \item Needs decent lighting for MediaPipe to work
-    \item Trained on our hands only -- might not generalize to other people
+    \item Trained on our hands only. Might not generalize to other people
+\end{itemize}
+
+\textbf{Future work.}
+\begin{itemize}
+    \item Add more gesture classes (e.g., pointing, fist, OK sign)
+    \item Support two-hand detection for more complex interactions
+    \item Train on a larger dataset with multiple people to improve generalization
+    \item Optimize for mobile deployment using model quantization
+    \item Explore temporal modeling (LSTM/transformer) to recognize gesture sequences
 \end{itemize}
 
 \end{document}

@@ -21,9 +21,12 @@ GESTURES = [
 ]
 
 def main():
-    fig, axes = plt.subplots(1, 5, figsize=(15, 4))
+    # 2 rows x 3 columns layout (5 gestures + 1 empty cell)
+    fig, axes = plt.subplots(2, 3, figsize=(10, 7))
+    axes = axes.flatten()
 
-    for ax, (folder_name, display_name) in zip(axes, GESTURES):
+    for i, (folder_name, display_name) in enumerate(GESTURES):
+        ax = axes[i]
         # Find first image in the folder
         folder = DATASET_DIR / folder_name
         images = sorted(folder.glob("*.jpg"))
@@ -41,7 +44,10 @@ def main():
 
         ax.axis("off")
 
-    plt.suptitle("Gesture Classes", fontsize=16, fontweight="bold", y=1.02)
+    # Hide the empty 6th cell
+    axes[5].axis("off")
+
+    plt.suptitle("Gesture Classes", fontsize=16, fontweight="bold", y=0.98)
     plt.tight_layout()
 
     # Save

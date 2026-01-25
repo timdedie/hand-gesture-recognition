@@ -12,6 +12,7 @@ RESULTS_PATH = "results.json"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+# trains the model for a given number of epochs
 def train_model(train_loader, test_loader, epochs=20):
     model = SimpleCNN(num_classes=5).to(device)
     criterion = nn.CrossEntropyLoss()
@@ -20,6 +21,7 @@ def train_model(train_loader, test_loader, epochs=20):
     history = {'train_loss': [], 'train_acc': [], 'test_loss': [], 'test_acc': []}
 
     for epoch in range(epochs):
+        # training phase
         model.train()
         train_loss = 0.0
         correct = 0
@@ -42,6 +44,7 @@ def train_model(train_loader, test_loader, epochs=20):
         train_acc = correct / total
         train_loss = train_loss / len(train_loader)
 
+        # evaluation phase
         model.eval()
         test_loss = 0.0
         correct = 0
@@ -71,6 +74,7 @@ def train_model(train_loader, test_loader, epochs=20):
     return model, history
 
 
+# tests different augmentation combinations
 def run_augmentation_experiments():
     augment_configs = [
         ('no_augmentation', None),
@@ -103,6 +107,7 @@ def run_augmentation_experiments():
     return results
 
 
+# tests how dataset size affects accuracy
 def run_dataset_size_experiments():
     sizes = [50, 100, 200, None]
     results = {}
